@@ -22,6 +22,16 @@ def build_parser() -> argparse.ArgumentParser:
         dest="command",
         required=True,
     )
+    doctor = subparsers.add_parser(
+        "doctor",
+        help="Check database health.",
+    )
+    doctor.add_argument(
+        "--database",
+        "-d",
+        required=True,
+        help="Database directory.",
+    )
 
     # --------------------------------------------------
     # EXPLAIN
@@ -383,6 +393,32 @@ def cmd_stats(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_doctor(args: argparse.Namespace) -> int:
+    try:
+        with Database(args.database) as database:
+            result = database.doctor()
+
+        print("LogForge Doctor")
+        print("────────────────────────")
+
+        for check in result["checks"]:
+            if check["status"] == "ok":
+                print(f"✓ {check['name']}")
+            else:
+                print(f"✗ {check['name']}: {check['message']}")
+
+        print("────────────────────────")
+
+        if result["healthy"]:
+            print("Database is healthy.")
+            return 0
+
+        print("Database has problems.")
+        return 1
+
+    except Exception as exc:
+        print(f"✗ Doctor failed: {exc}")
+        return 1
 def cmd_groupby(args: argparse.Namespace) -> int:
 
     with Database(args.database) as database:
@@ -476,6 +512,8 @@ def main(argv=None) -> int:
             return cmd_search(args)
         if args.command == "analyze":
             return cmd_analyze(args)
+        elif args.command == "doctor":
+            return cmd_doctor(args)
 
         parser.error(
             f"Unknown command: {args.command}"
@@ -500,3 +538,4 @@ def main(argv=None) -> int:
         return 1
 
     return 0
+

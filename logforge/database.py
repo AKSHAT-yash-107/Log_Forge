@@ -62,6 +62,69 @@ class Database:
     ) -> None:
         self.close()
 
+    def doctor(self) -> dict[str, Any]:
+        """Run health checks against the database."""
+
+        checks: list[dict[str, Any]] = []
+
+        def check(name: str, fn) -> None:
+            try:
+                fn()
+                checks.append({
+                    "name": name,
+                    "status": "ok",
+                })
+            except Exception as exc:
+                checks.append({
+                    "name": name,
+                    "status": "error",
+                    "message": str(exc),
+                })
+
+
+
+        def check_metadata() -> None:
+            metadata = self.metadata.load()
+            if not metadata:
+                raise ValueError("metadata is empty")
+
+        def check_storage() -> None:
+            self.store.count()
+
+        def check_records() -> None:
+            count = self.store.count()
+
+            if count < 0:
+                raise ValueError("invalid record count")
+
+        def check_hash_indexes() -> None:
+            for field, index in self.indexes.hash_indexes.items():
+                index.load()
+
+        def check_numeric_indexes() -> None:
+            for field, index in self.indexes.numeric_indexes.items():
+                index.load()
+
+        def check_search_index() -> None:
+            if self.indexes.inverted_index is not None:
+                self.indexes.inverted_index.load()
+
+        check("Metadata", check_metadata)
+        check("Storage", check_storage)
+        check("Record count", check_records)
+        check("Hash indexes", check_hash_indexes)
+        check("Numeric indexes", check_numeric_indexes)
+        check("Search index", check_search_index)
+
+        healthy = all(
+            check["status"] == "ok"
+            for check in checks
+        )
+
+        return {
+            "healthy": healthy,
+            "checks": checks,
+        }
     def ingest(
         self,
         source: str | Path,
