@@ -297,12 +297,14 @@ class Database:
             group_field,
             aggregate_field,
         )
-
     def query(
         self,
         expression: str,
+        select_fields: list[str] | None = None,
+        order_by: str | None = None,
+        descending: bool = False,
+        limit: int | None = None,
     ):
-
         ast = parse_query(expression)
 
         from .executor import QueryExecutor
@@ -313,4 +315,10 @@ class Database:
             self.indexes.numeric_indexes,
         )
 
-        return executor.execute(ast)
+        return executor.execute(
+            ast,
+            select_fields=select_fields,
+            order_by=order_by,
+            descending=descending,
+            limit=limit,
+        )

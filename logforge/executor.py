@@ -73,6 +73,7 @@ class QueryPlanner:
             ),
         )
 
+
     def _find_numeric_comparison(
             self,
             expression: Any,
@@ -170,7 +171,18 @@ class QueryExecutor:
     def execute(
             self,
             expression: Any,
+            select_fields: list[str] | None = None,
+            order_by: str | None = None,
+            descending: bool = False,
+            limit: int | None = None,
     ) -> Iterable[tuple[int, dict[str, Any]]]:
+        """Execute a query with optional projection, sorting, and limit."""
+
+        if limit is not None and limit < 0:
+            raise ValueError("limit must be non-negative")
+
+        if limit == 0:
+            return
 
         planner = QueryPlanner(
             set(self.indexes.keys()),
@@ -180,24 +192,42 @@ class QueryExecutor:
         plan = planner.plan(expression)
 
         if plan.strategy == "INDEX_SCAN":
-
-            yield from self._index_scan(
+            results = self._index_scan(
                 expression,
                 plan.index_field,
             )
 
         elif plan.strategy == "NUMERIC_INDEX_SCAN":
-
-            yield from self._numeric_index_scan(
+            results = self._numeric_index_scan(
                 expression,
                 plan.index_field,
             )
 
         else:
+            results = self._full_scan(expression)
 
-            yield from self._full_scan(
-                expression
+        records = list(results)
+
+        if order_by is not None:
+            records.sort(
+                key=lambda item: self._sort_key(
+                    item[1].get(order_by)
+                ),
+                reverse=descending,
             )
+
+        if limit is not None:
+            records = records[:limit]
+
+        for record_id, record in records:
+            if select_fields is not None:
+                projected = {
+                    field: record.get(field)
+                    for field in select_fields
+                }
+                yield record_id, projected
+            else:
+                yield record_id, record
 
     def _numeric_index_scan(
             self,
@@ -261,6 +291,22 @@ class QueryExecutor:
                     record,
             ):
                 yield record_id, record
+
+    @staticmethod
+    def _sort_key(value: Any) -> tuple[int, Any]:
+        """Create a stable sort key that places nulls last."""
+
+        if value is None:
+            return (1, "")
+
+        if isinstance(value, bool):
+            return (0, int(value))
+
+        if isinstance(value, (int, float)):
+            return (0, value)
+
+        return (0, str(value))
+
     def _index_scan(
         self,
         expression: Any,

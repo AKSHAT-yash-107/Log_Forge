@@ -209,6 +209,24 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Maximum number of results.",
     )
+    query.add_argument(
+        "--select",
+        nargs="+",
+        default=None,
+        help="Fields to return.",
+    )
+
+    query.add_argument(
+        "--order-by",
+        default=None,
+        help="Field to sort results by.",
+    )
+
+    query.add_argument(
+        "--desc",
+        action="store_true",
+        help="Sort in descending order.",
+    )
 
     # --------------------------------------------------
     # SEARCH
@@ -305,17 +323,16 @@ def cmd_analyze(args: argparse.Namespace) -> int:
     return 0
 
 def cmd_query(args: argparse.Namespace) -> int:
-
     with Database(args.database) as database:
-
         results = database.query(
-            args.where
+            args.where,
+            select_fields=args.select,
+            order_by=args.order_by,
+            descending=args.desc,
+            limit=args.limit,
         )
 
-        count = 0
-
         for record_id, record in results:
-
             print(
                 json.dumps(
                     {
@@ -326,16 +343,7 @@ def cmd_query(args: argparse.Namespace) -> int:
                 )
             )
 
-            count += 1
-
-            if (
-                args.limit is not None
-                and count >= args.limit
-            ):
-                break
-
     return 0
-
 
 def cmd_explain(args: argparse.Namespace) -> int:
 
