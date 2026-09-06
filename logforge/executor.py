@@ -9,6 +9,7 @@ from .query import And, Comparison, Not, Or
 from .storage import RecordStore
 from .numeric_index import NumericIndex
 from .index import HashIndex
+from logforge.database import Database
 
 
 @dataclass
@@ -209,10 +210,14 @@ class QueryExecutor:
         records = list(results)
 
         if order_by is not None:
+            for _, record in records:
+                if order_by not in record:
+                    raise ValueError(
+                        f"Cannot sort by unknown field: {order_by}"
+                    )
+
             records.sort(
-                key=lambda item: self._sort_key(
-                    item[1].get(order_by)
-                ),
+                key=lambda item: self._sort_key(item[1].get(order_by)),
                 reverse=descending,
             )
 

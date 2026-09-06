@@ -93,6 +93,17 @@ class TestQueryFeatures(unittest.TestCase):
             [95, 90, 80, 70],
         )
 
+    def test_sort_by_missing_field(self):
+        with Database(self.database) as database:
+            with self.assertRaises(ValueError):
+                list(
+                    database.query(
+                        "age >= 30",
+                        order_by="DoesNotExist",
+                    )
+                )
+
+
     def test_limit(self):
         with Database(self.database) as database:
             results = list(
