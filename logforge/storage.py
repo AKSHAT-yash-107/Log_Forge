@@ -287,9 +287,21 @@ class RecordStore:
             // _LENGTH_STRUCT.size
         )
 
+    def flush(self) -> None:
+        """Make all pending storage writes durable."""
+
+        self._ensure_open()
+
+        self.data_file.flush()
+        os.fsync(self.data_file.fileno())
+
+        self.offset_file.flush()
+        os.fsync(self.offset_file.fileno())
+
     def append(
-        self,
-        record: dict[str, Any],
+            self,
+            record: dict[str, Any],
+            durable: bool = True,
     ) -> int:
         """
         Append a record and return its record ID.
@@ -339,11 +351,13 @@ class RecordStore:
         )
 
         # Make record durable before publishing offset.
-        self.data_file.flush()
+        # Make record durable before publishing offset.
+        if durable:
+            self.data_file.flush()
 
-        os.fsync(
-            self.data_file.fileno()
-        )
+            os.fsync(
+                self.data_file.fileno()
+            )
 
         # --------------------------------------------------
         # Publish offset
@@ -360,11 +374,12 @@ class RecordStore:
             )
         )
 
-        self.offset_file.flush()
+        if durable:
+            self.offset_file.flush()
 
-        os.fsync(
-            self.offset_file.fileno()
-        )
+            os.fsync(
+                self.offset_file.fileno()
+            )
 
         return self.count() - 1
 

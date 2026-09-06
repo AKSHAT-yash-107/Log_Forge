@@ -106,7 +106,8 @@ class Database:
             schema.observe(record)
 
             record_id = self.store.append(
-                record
+                record,
+                durable=False,
             )
 
             for index in indexes:
@@ -128,7 +129,7 @@ class Database:
                 )
 
             records_ingested += 1
-
+        self.store.flush()
         self.indexes.save_all()
 
         metadata = {
