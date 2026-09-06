@@ -2,11 +2,77 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-
+import tempfile
+from pathlib import Path
 from logforge.database import Database
 
 
 class TestDatabase(unittest.TestCase):
+
+    def test_search(self):
+        with tempfile.TemporaryDirectory() as directory:
+            database = Database(directory)
+
+            database.open()
+
+            source = Path(directory) / "data.jsonl"
+
+            source.write_text(
+                '{"Name": "John Smith", "City": "London"}\n'
+                '{"Name": "Alice Brown", "City": "Paris"}\n'
+                '{"Name": "John Doe", "City": "Berlin"}\n',
+                encoding="utf-8",
+            )
+
+            result = database.ingest(
+                source,
+                format_name="jsonl",
+                search_index=True,
+            )
+
+            self.assertTrue(
+                result["search_index"]
+            )
+
+            results = database.search("John")
+
+            self.assertEqual(
+                [record_id for record_id, _ in results],
+                [0, 2],
+            )
+
+            database.close()
+
+    def test_search_after_reopen(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "data.jsonl"
+
+            source.write_text(
+                '{"Name": "John Smith"}\n'
+                '{"Name": "Alice Brown"}\n',
+                encoding="utf-8",
+            )
+
+            with Database(directory) as database:
+                database.ingest(
+                    source,
+                    format_name="jsonl",
+                    search_index=True,
+                )
+
+            with Database(directory) as database:
+                results = database.search("John")
+
+                self.assertEqual(
+                    results,
+                    [
+                        (
+                            0,
+                            {"Name": "John Smith"},
+                        )
+                    ],
+                )
+
 
     def create_source(
         self,

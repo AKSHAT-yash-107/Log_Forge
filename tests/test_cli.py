@@ -207,5 +207,116 @@ class TestCLI(unittest.TestCase):
             )
 
 
+    def test_search_command(self):
+
+        with tempfile.TemporaryDirectory() as directory:
+
+            directory = Path(directory)
+
+            source = directory / "data.jsonl"
+            database = directory / "db"
+
+            source.write_text(
+                '{"Name":"John Smith","City":"London"}\n'
+                '{"Name":"Alice Brown","City":"Paris"}\n'
+                '{"Name":"John Doe","City":"Berlin"}\n',
+                encoding="utf-8",
+            )
+
+            main([
+                "ingest",
+                str(source),
+                "--database",
+                str(database),
+                "--search",
+            ])
+
+            output = io.StringIO()
+
+            with redirect_stdout(output):
+
+                exit_code = main([
+                    "search",
+                    "--database",
+                    str(database),
+                    "John",
+                ])
+
+            self.assertEqual(
+                exit_code,
+                0,
+            )
+
+            lines = output.getvalue().splitlines()
+
+            self.assertEqual(
+                len(lines),
+                2,
+            )
+
+            records = [
+                json.loads(line)
+                for line in lines
+            ]
+
+            self.assertEqual(
+                records[0]["_id"],
+                0,
+            )
+
+            self.assertEqual(
+                records[1]["_id"],
+                2,
+            )
+
+
+    def test_search_limit(self):
+
+        with tempfile.TemporaryDirectory() as directory:
+
+            directory = Path(directory)
+
+            source = directory / "data.jsonl"
+            database = directory / "db"
+
+            source.write_text(
+                '{"Name":"John Smith"}\n'
+                '{"Name":"John Doe"}\n'
+                '{"Name":"John Brown"}\n',
+                encoding="utf-8",
+            )
+
+            main([
+                "ingest",
+                str(source),
+                "--database",
+                str(database),
+                "--search",
+            ])
+
+            output = io.StringIO()
+
+            with redirect_stdout(output):
+
+                exit_code = main([
+                    "search",
+                    "--database",
+                    str(database),
+                    "John",
+                    "--limit",
+                    "2",
+                ])
+
+            self.assertEqual(
+                exit_code,
+                0,
+            )
+
+            self.assertEqual(
+                len(output.getvalue().splitlines()),
+                2,
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

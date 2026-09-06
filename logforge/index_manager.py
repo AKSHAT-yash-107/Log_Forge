@@ -1,19 +1,20 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 from .index import HashIndex
 from .numeric_index import NumericIndex
+from .search import InvertedIndex
 
 
 class IndexManager:
-    """Manage LogForge hash and numeric indexes."""
+    """Manage LogForge hash, numeric, and full-text indexes."""
 
     def __init__(self, database: str | Path):
         self.database = Path(database)
         self.directory = self.database / "indexes"
 
+        self.inverted_index: InvertedIndex | None = None
         self.hash_indexes: dict[str, HashIndex] = {}
         self.numeric_indexes: dict[str, NumericIndex] = {}
 
@@ -21,6 +22,15 @@ class IndexManager:
     def indexes(self) -> dict[str, HashIndex]:
         """Backward-compatible access to hash indexes."""
         return self.hash_indexes
+
+    def create_search(self) -> InvertedIndex:
+        index = InvertedIndex(
+            path=self.directory / "text.idx"
+        )
+
+        self.inverted_index = index
+
+        return index
 
     def create(
         self,
@@ -99,6 +109,9 @@ class IndexManager:
         for index in self.numeric_indexes.values():
             index.save()
 
+        if self.inverted_index is not None:
+            self.inverted_index.save()
+
     def load_all(self) -> None:
 
         if not self.directory.exists():
@@ -119,11 +132,24 @@ class IndexManager:
             if path.name.endswith(".numeric.idx"):
                 continue
 
+            # text.idx belongs to the inverted index,
+            # not the hash-index system.
+            if path.name == "text.idx":
+                continue
+
             field = path.stem
 
             index = self.create(field)
 
             index.load()
+
+        search_path = self.directory / "text.idx"
+
+        if search_path.exists():
+            self.inverted_index = InvertedIndex(
+                path=search_path
+            )
+            self.inverted_index.load()
 
     def build_from_store(
         self,

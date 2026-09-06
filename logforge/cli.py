@@ -22,6 +22,7 @@ def build_parser() -> argparse.ArgumentParser:
         dest="command",
         required=True,
     )
+
     # --------------------------------------------------
     # EXPLAIN
     # --------------------------------------------------
@@ -43,6 +44,7 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         help="Filter expression.",
     )
+
     # --------------------------------------------------
     # INGEST
     # --------------------------------------------------
@@ -51,6 +53,7 @@ def build_parser() -> argparse.ArgumentParser:
         "ingest",
         help="Ingest a CSV or JSONL file.",
     )
+
     ingest.add_argument(
         "--numeric-index",
         action="append",
@@ -60,6 +63,7 @@ def build_parser() -> argparse.ArgumentParser:
             "Can be specified multiple times."
         ),
     )
+
     ingest.add_argument(
         "source",
         help="Path to CSV or JSONL file.",
@@ -88,6 +92,13 @@ def build_parser() -> argparse.ArgumentParser:
             "multiple times."
         ),
     )
+
+    ingest.add_argument(
+        "--search",
+        action="store_true",
+        help="Build a full-text search index.",
+    )
+
     # --------------------------------------------------
     # STATS
     # --------------------------------------------------
@@ -183,6 +194,35 @@ def build_parser() -> argparse.ArgumentParser:
         help="Maximum number of results.",
     )
 
+    # --------------------------------------------------
+    # SEARCH
+    # --------------------------------------------------
+
+    search = subparsers.add_parser(
+        "search",
+        help="Search indexed text.",
+    )
+
+    search.add_argument(
+        "text",
+        help="Text to search for.",
+    )
+
+    search.add_argument(
+        "--database",
+        "-d",
+        default="data/logforge",
+        help="LogForge database directory.",
+    )
+
+    search.add_argument(
+        "--limit",
+        "-n",
+        type=int,
+        default=None,
+        help="Maximum number of results.",
+    )
+
     return parser
 
 
@@ -194,6 +234,7 @@ def cmd_ingest(args: argparse.Namespace) -> int:
             format_name=args.format,
             index_fields=args.index,
             numeric_index_fields=args.numeric_index,
+            search_index=args.search,
         )
 
     print(
@@ -266,6 +307,7 @@ def cmd_query(args: argparse.Namespace) -> int:
 
     return 0
 
+
 def cmd_explain(args: argparse.Namespace) -> int:
 
     with Database(args.database) as database:
@@ -284,6 +326,7 @@ def cmd_explain(args: argparse.Namespace) -> int:
 
     return 0
 
+
 def cmd_stats(args: argparse.Namespace) -> int:
 
     with Database(args.database) as database:
@@ -301,6 +344,8 @@ def cmd_stats(args: argparse.Namespace) -> int:
     )
 
     return 0
+
+
 def cmd_groupby(args: argparse.Namespace) -> int:
 
     with Database(args.database) as database:
@@ -331,6 +376,40 @@ def cmd_groupby(args: argparse.Namespace) -> int:
 
     return 0
 
+
+def cmd_search(args: argparse.Namespace) -> int:
+
+    with Database(args.database) as database:
+
+        results = database.search(
+            args.text
+        )
+
+        count = 0
+
+        for record_id, record in results:
+
+            print(
+                json.dumps(
+                    {
+                        "_id": record_id,
+                        **record,
+                    },
+                    ensure_ascii=False,
+                )
+            )
+
+            count += 1
+
+            if (
+                args.limit is not None
+                and count >= args.limit
+            ):
+                break
+
+    return 0
+
+
 def main(argv=None) -> int:
 
     parser = build_parser()
@@ -355,6 +434,9 @@ def main(argv=None) -> int:
 
         if args.command == "query":
             return cmd_query(args)
+
+        if args.command == "search":
+            return cmd_search(args)
 
         parser.error(
             f"Unknown command: {args.command}"

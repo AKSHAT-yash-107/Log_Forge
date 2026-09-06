@@ -1,8 +1,9 @@
 from __future__ import annotations
-from .ingest import detect_format
+
 from pathlib import Path
 from typing import Any, Iterable
 
+from .ingest import detect_format
 from .formats import open_parser
 from .index_manager import IndexManager
 from .metadata import MetadataStore
@@ -21,6 +22,7 @@ class Database:
     - metadata
     - indexes
     - query execution
+    - full-text search
     """
 
     def __init__(self, directory: str | Path):
@@ -61,11 +63,12 @@ class Database:
         self.close()
 
     def ingest(
-            self,
-            source: str | Path,
-            format_name: str | None = None,
-            index_fields: Iterable[str] = (),
-            numeric_index_fields: Iterable[str] = (),
+        self,
+        source: str | Path,
+        format_name: str | None = None,
+        index_fields: Iterable[str] = (),
+        numeric_index_fields: Iterable[str] = (),
+        search_index: bool = False,
     ) -> dict[str, Any]:
 
         source = Path(source)
@@ -82,10 +85,17 @@ class Database:
             numeric_indexes.append(
                 self.indexes.create_numeric(field)
             )
+
         for field in index_fields:
             indexes.append(
                 self.indexes.create(field)
             )
+
+        # Create the inverted index only when requested.
+        inverted_index = None
+
+        if search_index:
+            inverted_index = self.indexes.create_search()
 
         records_ingested = 0
 
@@ -107,6 +117,12 @@ class Database:
 
             for index in numeric_indexes:
                 index.add(
+                    record_id,
+                    record,
+                )
+
+            if inverted_index is not None:
+                inverted_index.add(
                     record_id,
                     record,
                 )
@@ -137,6 +153,7 @@ class Database:
             "indexes": sorted(
                 self.indexes.fields()
             ),
+            "search_index": search_index,
         }
 
     def get(
@@ -148,9 +165,35 @@ class Database:
             record_id
         )
 
+    def search(
+        self,
+        text: str,
+    ) -> list[tuple[int, dict[str, Any]]]:
+        """
+        Search indexed text and return matching records.
+
+        Returns:
+            [(record_id, record), ...]
+        """
+
+        inverted_index = self.indexes.inverted_index
+
+        if inverted_index is None:
+            raise ValueError(
+                "Full-text search index is not available. "
+                "Ingest the database with search_index=True."
+            )
+
+        record_ids = inverted_index.search(text)
+
+        return [
+            (record_id, self.store.get(record_id))
+            for record_id in sorted(record_ids)
+        ]
+
     def explain(
-            self,
-            expression: str,
+        self,
+        expression: str,
     ) -> dict[str, Any]:
 
         from .executor import QueryPlanner
@@ -175,6 +218,7 @@ class Database:
             "value": plan.value,
             "reason": plan.reason,
         }
+
     def count(self) -> int:
         return len(self.store)
 
@@ -182,8 +226,8 @@ class Database:
         return self.metadata.load()
 
     def stats(
-            self,
-            field: str,
+        self,
+        field: str,
     ) -> dict[str, Any]:
 
         from .analytics import numeric_stats
@@ -199,8 +243,8 @@ class Database:
         )
 
     def groupby(
-            self,
-            field: str,
+        self,
+        field: str,
     ) -> dict[Any, int]:
 
         from .analytics import group_by
@@ -216,9 +260,9 @@ class Database:
         )
 
     def groupby_numeric(
-            self,
-            group_field: str,
-            aggregate_field: str,
+        self,
+        group_field: str,
+        aggregate_field: str,
     ) -> dict[Any, dict[str, Any]]:
 
         from .analytics import group_by_numeric
@@ -233,9 +277,10 @@ class Database:
             group_field,
             aggregate_field,
         )
+
     def query(
-            self,
-            expression: str,
+        self,
+        expression: str,
     ):
 
         ast = parse_query(expression)
