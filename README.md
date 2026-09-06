@@ -56,25 +56,30 @@ Analytics / CLI
 
 ## Installation
 
-LogForge has no `pyproject.toml`/`setup.py` yet, so it isn't pip-installable. Run it directly from the repository root with `PYTHONPATH` set:
+Requires Python 3.10+ (uses `from __future__ import annotations` and `X | Y` union syntax throughout).
+
+Clone and install in editable mode:
+
+```bash
+git clone https://github.com/AKSHAT-yash-107/Log_Forge.git
+cd Log_Forge
+pip install -e .
+logforge --help
+```
+
+Or run it directly without installing, by setting `PYTHONPATH`:
 
 ```bash
 # macOS / Linux
-git clone https://github.com/AKSHAT-yash-107/Log_Forge.git
-cd Log_Forge
 export PYTHONPATH=.
 python3 -m logforge --help
 ```
 
 ```powershell
 # Windows (PowerShell)
-git clone https://github.com/AKSHAT-yash-107/Log_Forge.git
-cd Log_Forge
 $env:PYTHONPATH = "."
 python -m logforge --help
 ```
-
-Requires Python 3.10+ (uses `from __future__ import annotations` and `X | Y` union syntax throughout).
 
 ## Architecture
 
@@ -432,14 +437,6 @@ Log_Forge/
 
 `data/` in the command examples above is a database directory LogForge creates for you on first `ingest` — it is not part of the repository.
 
-
-## Installation
-
-Clone the repository:
-
-```bash
-git clone https://github.com/AKSHAT-yash-107/Log_Forge.git
-cd Log_Forge 
 ## Dependencies
 
 **Runtime dependencies: none.**
