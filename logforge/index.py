@@ -67,6 +67,22 @@ class HashIndex:
             for ids in self._mapping.values()
         )
 
+    def validate(self, record_count: int) -> None:
+        """Validate basic hash-index consistency."""
+
+        for record_ids in self._mapping.values():
+            for record_id in record_ids:
+                if not isinstance(record_id, int):
+                    raise ValueError(
+                        f"Invalid record ID in hash index: {record_id!r}"
+                    )
+
+                if record_id < 0 or record_id >= record_count:
+                    raise ValueError(
+                        f"Record ID {record_id} is outside "
+                        f"database range 0..{record_count - 1}"
+                    )
+
     def clear(self) -> None:
         self._mapping.clear()
 

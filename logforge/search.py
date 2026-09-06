@@ -120,6 +120,27 @@ class InvertedIndex:
             }
         )
 
+    def validate(self, record_count: int) -> None:
+        """Validate basic inverted-index consistency."""
+
+        for token, record_ids in self._mapping.items():
+            if not isinstance(token, str):
+                raise ValueError(
+                    f"Invalid token in search index: {token!r}"
+                )
+
+            for record_id in record_ids:
+                if not isinstance(record_id, int):
+                    raise ValueError(
+                        f"Invalid record ID in search index: {record_id!r}"
+                    )
+
+                if record_id < 0 or record_id >= record_count:
+                    raise ValueError(
+                        f"Record ID {record_id} is outside "
+                        f"database range 0..{record_count - 1}"
+                    )
+
     def clear(self) -> None:
         self._mapping.clear()
 

@@ -172,6 +172,38 @@ class NumericIndex:
             for ids in self._mapping.values()
         )
 
+    def validate(self, record_count: int) -> None:
+        """Validate basic numeric-index consistency."""
+
+        if self._values != sorted(self._values):
+            raise ValueError("Numeric index values are not sorted")
+
+        if len(self._values) != len(set(self._values)):
+            raise ValueError("Numeric index contains duplicate values")
+
+        for value in self._values:
+            if not self._is_numeric(value):
+                raise ValueError(
+                    f"Invalid numeric index value: {value!r}"
+                )
+
+            if value not in self._mapping:
+                raise ValueError(
+                    f"Missing mapping for numeric value: {value!r}"
+                )
+
+            for record_id in self._mapping[value]:
+                if not isinstance(record_id, int):
+                    raise ValueError(
+                        f"Invalid record ID in numeric index: {record_id!r}"
+                    )
+
+                if record_id < 0 or record_id >= record_count:
+                    raise ValueError(
+                        f"Record ID {record_id} is outside "
+                        f"database range 0..{record_count - 1}"
+                    )
+
     def clear(self) -> None:
         self._values.clear()
         self._mapping.clear()

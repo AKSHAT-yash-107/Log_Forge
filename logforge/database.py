@@ -98,16 +98,22 @@ class Database:
                 raise ValueError("invalid record count")
 
         def check_hash_indexes() -> None:
+            record_count = self.store.count()
+
             for field, index in self.indexes.hash_indexes.items():
-                index.load()
+                index.validate(record_count)
 
         def check_numeric_indexes() -> None:
+            record_count = self.store.count()
+
             for field, index in self.indexes.numeric_indexes.items():
-                index.load()
+                index.validate(record_count)
 
         def check_search_index() -> None:
             if self.indexes.inverted_index is not None:
-                self.indexes.inverted_index.load()
+                self.indexes.inverted_index.validate(
+                    self.store.count()
+                )
 
         check("Metadata", check_metadata)
         check("Storage", check_storage)
