@@ -1,0 +1,5 @@
+{"timestamp":"2026-09-06T10:00:00","status":200,"endpoint":"/api/users","response_time":120,"message":"request completed"}
+{"timestamp":"2026-09-06T10:00:01","status":200,"endpoint":"/api/users","response_time":95,"message":"request completed"}
+{"timestamp":"2026-09-06T10:00:02","status":500,"endpoint":"/api/orders","response_time":1532,"message":"database timeout"}
+{"timestamp":"2026-09-06T10:00:03","status":404,"endpoint":"/api/products","response_time":210,"message":"product not found"}
+{"timestamp":"2026-09-06T10:00:04","status":500,"endpoint":"/api/orders","response_time":2100,"message":"database timeout"}
