@@ -432,6 +432,14 @@ Log_Forge/
 
 `data/` in the command examples above is a database directory LogForge creates for you on first `ingest` — it is not part of the repository.
 
+
+## Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/AKSHAT-yash-107/Log_Forge.git
+cd Log_Forge 
 ## Dependencies
 
 **Runtime dependencies: none.**
