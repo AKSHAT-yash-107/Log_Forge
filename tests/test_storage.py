@@ -1,21 +1,31 @@
-import tempfile
-import unittest
-
-from logforge.storage import RecordStore
-
 import json
 import os
 import struct
+import tempfile
+import unittest
 import zlib
+from pathlib import Path
+
 from logforge.errors import CorruptionError
 from logforge.storage import (
     RecordStore,
     _CRC_STRUCT,
     _LENGTH_STRUCT,
 )
-
 class TestRecordStore(unittest.TestCase):
+    def test_bulk_style_append_and_flush_persists(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)
 
+            with RecordStore(path) as store:
+                store.append({"id": 1}, durable=False)
+                store.append({"id": 2}, durable=False)
+                store.flush()
+
+            with RecordStore(path) as store:
+                self.assertEqual(store.count(), 2)
+                self.assertEqual(store.get(0), {"id": 1})
+                self.assertEqual(store.get(1), {"id": 2})
     def test_append_and_get(self):
         with tempfile.TemporaryDirectory() as directory:
             with RecordStore(directory) as store:
@@ -82,6 +92,7 @@ class TestRecordStore(unittest.TestCase):
                     store.get(1)["id"],
                     2,
                 )
+
 
     def test_corrupted_record_checksum(self):
         with tempfile.TemporaryDirectory() as directory:
