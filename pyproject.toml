@@ -7,7 +7,7 @@ name = "logforge"
 version = "0.1.0"
 description = "A zero-dependency local data engine for CSV, JSONL, and log data."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 dependencies = []
 
 [project.scripts]
