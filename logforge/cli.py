@@ -164,6 +164,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="LogForge database directory.",
     )
 
+
+    # --------------------------------------------------
+    # ANALYZE
+    # --------------------------------------------------
+
+    analyze = subparsers.add_parser(
+        "analyze",
+        help="Analyze database schema, statistics, and indexes.",
+    )
+
+    analyze.add_argument(
+        "--database",
+        "-d",
+        default="data/logforge",
+        help="LogForge database directory.",
+    )
     # --------------------------------------------------
     # QUERY
     # --------------------------------------------------
@@ -274,6 +290,19 @@ def cmd_inspect(args: argparse.Namespace) -> int:
 
     return 0
 
+def cmd_analyze(args: argparse.Namespace) -> int:
+    with Database(args.database) as database:
+        result = database.analyze()
+
+    print(
+        json.dumps(
+            result,
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+
+    return 0
 
 def cmd_query(args: argparse.Namespace) -> int:
 
@@ -437,6 +466,8 @@ def main(argv=None) -> int:
 
         if args.command == "search":
             return cmd_search(args)
+        if args.command == "analyze":
+            return cmd_analyze(args)
 
         parser.error(
             f"Unknown command: {args.command}"

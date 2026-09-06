@@ -225,6 +225,26 @@ class Database:
     def inspect(self) -> dict[str, Any]:
         return self.metadata.load()
 
+
+    def analyze(self) -> dict[str, Any]:
+        """Return a complete overview of the database."""
+
+        metadata = self.metadata.load()
+
+        schema = metadata.get("schema", {})
+
+        return {
+            "source": metadata.get("source"),
+            "format": metadata.get("format"),
+            "records": self.count(),
+            "fields": schema.get("fields", {}),
+            "indexes": {
+                "hash": sorted(self.indexes.hash_indexes.keys()),
+                "numeric": sorted(self.indexes.numeric_indexes.keys()),
+                "search": self.indexes.inverted_index is not None,
+            },
+        }
+
     def stats(
         self,
         field: str,
