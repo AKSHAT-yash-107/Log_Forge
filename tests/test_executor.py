@@ -45,6 +45,39 @@ class TestQueryPlanner(unittest.TestCase):
             "FULL_SCAN",
         )
 
+    def test_or_expression_uses_full_scan(self):
+        planner = QueryPlanner(
+            {"status", "service"}
+        )
+
+        expression = parse_query(
+            "status = 500 OR service = 'auth'"
+        )
+
+        plan = planner.plan(expression)
+
+        self.assertEqual(
+            plan.strategy,
+            "FULL_SCAN",
+        )
+
+    def test_numeric_or_expression_uses_full_scan(self):
+        planner = QueryPlanner(
+            set(),
+            {"response_time"},
+        )
+
+        expression = parse_query(
+            "response_time > 500 OR response_time < 100"
+        )
+
+        plan = planner.plan(expression)
+
+        self.assertEqual(
+            plan.strategy,
+            "FULL_SCAN",
+        )
+
 
 class TestQueryExecutor(unittest.TestCase):
 
@@ -173,6 +206,38 @@ class TestQueryExecutor(unittest.TestCase):
                 self.assertEqual(
                     results[0][1]["response_time"],
                     2000,
+                )
+
+    def test_or_expression_returns_matches_from_both_branches(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with RecordStore(directory) as store:
+                records = [
+                    {"status": 500, "service": "payment"},
+                    {"status": 200, "service": "auth"},
+                    {"status": 500, "service": "auth"},
+                    {"status": 404, "service": "search"},
+                ]
+
+                index = HashIndex("status")
+
+                for record in records:
+                    record_id = store.append(record)
+                    index.add(record_id, record)
+
+                expression = parse_query(
+                    "status = 500 OR service = 'auth'"
+                )
+
+                executor = QueryExecutor(
+                    store,
+                    {"status": index},
+                )
+
+                results = list(executor.execute(expression))
+
+                self.assertEqual(
+                    len(results),
+                    3,
                 )
 
 

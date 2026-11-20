@@ -74,19 +74,16 @@ class QueryPlanner:
             ),
         )
 
-
     def _find_numeric_comparison(
             self,
             expression: Any,
     ) -> Comparison | None:
+        """Find a safe numeric range condition for index scanning."""
 
         if isinstance(expression, Comparison):
-
             if (
-                    expression.field
-                    in self.numeric_indexed_fields
-                    and expression.operator
-                    in {">", ">=", "<", "<="}
+                    expression.field in self.numeric_indexed_fields
+                    and expression.operator in {">", ">=", "<", "<="}
             ):
                 return expression
 
@@ -94,32 +91,20 @@ class QueryPlanner:
 
         if isinstance(expression, And):
             return (
-                    self._find_numeric_comparison(
-                        expression.left
-                    )
-                    or self._find_numeric_comparison(
-                expression.right
-            )
+                    self._find_numeric_comparison(expression.left)
+                    or self._find_numeric_comparison(expression.right)
             )
 
-        if isinstance(expression, Or):
-            return (
-                    self._find_numeric_comparison(
-                        expression.left
-                    )
-                    or self._find_numeric_comparison(
-                expression.right
-            )
-            )
-
+        # Do not use one branch of OR or a condition inside NOT.
         return None
+
     def _find_indexable_comparison(
             self,
             expression: Any,
     ) -> Comparison | None:
+        """Find a safe equality condition for index scanning."""
 
         if isinstance(expression, Comparison):
-
             if (
                     expression.operator == "="
                     and expression.field in self.indexed_fields
@@ -130,27 +115,11 @@ class QueryPlanner:
 
         if isinstance(expression, And):
             return (
-                    self._find_indexable_comparison(
-                        expression.left
-                    )
-                    or self._find_indexable_comparison(
-                expression.right
-            )
+                    self._find_indexable_comparison(expression.left)
+                    or self._find_indexable_comparison(expression.right)
             )
 
-        if isinstance(expression, Or):
-            return (
-                    self._find_indexable_comparison(
-                        expression.left
-                    )
-                    or self._find_indexable_comparison(
-                expression.right
-            )
-            )
-
-        if isinstance(expression, Not):
-            return None
-
+        # OR and NOT require more advanced index planning.
         return None
 
 
